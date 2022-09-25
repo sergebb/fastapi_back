@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from starlette.concurrency import run_until_first_complete
+
+from fastapi import APIRouter, Depends, HTTPException, status, WebSocket
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
-from internal import schemas, crud, auth
+from internal import auth, broadcast, crud, schemas
 from internal.database import get_session
 
 
@@ -54,3 +56,18 @@ async def get_chatroom(name: str,
         )
 
     return chatroom
+
+
+@router.websocket("/{chatname}/ws")
+async def websocket_endpoint(websocket: WebSocket, chatname: str, db: Session = Depends(get_session)):
+    await websocket.accept()
+    auth_data = await websocket.receive_text()
+    if not auth_data.startswith('Bearer '):
+        websocket.close()
+    
+    user = auth.get_user_from_token(db, auth_data[7:])
+
+    await run_until_first_complete(
+        (broadcast.ws_receiver, {"websocket": websocket, 'chatname': chatname, 'username': user.username}),
+        (broadcast.ws_sender, {"websocket": websocket, 'chatname': chatname}),
+    )

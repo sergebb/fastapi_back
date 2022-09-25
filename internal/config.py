@@ -5,3 +5,5 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./chatrooms.db"
 # SQLALCHEMY_DATABASE_URL = "postgresql://user:password@postgresserver/db"
+
+REDIS_DATABASE_URL = "redis://localhost:6379"
